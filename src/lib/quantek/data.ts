@@ -12,7 +12,26 @@ export const initialEvents: AuditEvent[] = [
 {id:'e4',time:'12:41:52',type:'Migration',severity:'warning',pool:'VEC',title:'Migration threshold approaching',detail:'VEC / SOL · 91.2% reserve progress'},
 {id:'e5',time:'12:38:44',type:'RPC',severity:'info',pool:'—',title:'Simulation checkpoint completed',detail:'12 accounts checked · No transactions submitted'},
 ];
-export const navigation = [ ['Overview','/'],['Agent','/agent'],['Launch','/launch'],['Pools','/pools'],['Positions','/positions'],['Fees','/fees'],['PQ Identity','/identity'],['Verify','/verify'],['Activity','/activity'],['Settings','/settings'] ] as const;
+export const operationalNavigation = [
+  ["Overview", "/"],
+  ["Agent", "/agent"],
+  ["Pools", "/pools"],
+  ["Positions", "/positions"],
+  ["Fees", "/fees"],
+  ["Activity", "/activity"],
+  ["Settings", "/settings"],
+] as const;
+
+export const productNavigation = [
+  ["Launch", "/launch"],
+  ["Identity", "/identity"],
+  ["Quantum Wallets", "/quantum-wallets"],
+  ["Verify", "/verify"],
+  ["Docs", "/docs"],
+] as const;
+
+export const navigation = [...operationalNavigation, ...productNavigation] as const;
+
 export function metadata(title:string,description:string){
   return {
     meta: [
