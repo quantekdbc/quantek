@@ -1,0 +1,30 @@
+name: Quantum Wallet Program
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "Cargo.toml"
+      - "programs/quantek-quantum-wallet/**"
+      - ".github/workflows/quantum-wallet-ci.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "Cargo.toml"
+      - "programs/quantek-quantum-wallet/**"
+      - ".github/workflows/quantum-wallet-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  rust:
+    name: Rust check and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo check --workspace --all-targets
+      - run: cargo test --workspace
