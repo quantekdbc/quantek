@@ -1,0 +1,57 @@
+name: Bug report
+description: Report reproducible incorrect behavior in QUANTEK.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not report unpatched security vulnerabilities here. Use the private process in SECURITY.md.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction
+      description: Minimal steps to reproduce the issue.
+      placeholder: |
+        1. Open …
+        2. Configure …
+        3. Click …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Meteora DBC
+        - Wallet / transaction signing
+        - Liquidity agent
+        - PQ identity / verification
+        - UI / routing
+        - Build / tooling
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: commit
+    attributes:
+      label: Commit or version
+      placeholder: e.g. main @ abc1234
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Logs, screenshots, or non-sensitive diagnostics.
