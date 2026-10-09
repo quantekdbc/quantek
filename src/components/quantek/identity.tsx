@@ -32,7 +32,8 @@ export function IdentityPage() {
   const [stage, setStage] = useState<Stage>("Derive");
   const [passphrase, setPassphrase] = useState("");
   const [harden, setHarden] = useState(false);
-  const [derived, setDerived] = useState<DerivedIdentity | null>(null);
+  const derived = c.identity;
+  const setDerived = c.setIdentity;
   const [progress, setProgress] = useState(0);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
