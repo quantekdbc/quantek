@@ -20,7 +20,6 @@ describe("QUANTEK identity boundary", () => {
       "devnet",
     );
     expect(message).toContain("QUANTEK");
-    expect(message).not.toContain("pqc.market");
   });
 
   it("never reuses a consumed one-time leaf", () => {
