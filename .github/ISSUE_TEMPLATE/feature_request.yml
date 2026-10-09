@@ -1,0 +1,43 @@
+name: Feature request
+description: Propose a focused improvement to QUANTEK.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user or protocol problem should this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the behavior, not just the UI.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Meteora DBC
+        - Wallet / transaction signing
+        - Liquidity agent
+        - PQ identity / verification
+        - Observability / audit
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: security
+    attributes:
+      label: Security and trust-boundary impact
+      description: Does this change signing, custody, transaction construction, RPC trust, or cryptographic verification?
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: What would make this complete and testable?
