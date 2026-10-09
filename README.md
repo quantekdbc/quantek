@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="./public/quantek-mark.svg" width="108" alt="QUANTEK geometric mark" />
+  <img src="./public/quantek-brand.jpg" width="720" alt="QUANTEK brand artwork" />
   <h1>QUANTEK</h1>
   <p><strong>Post-quantum-attested operations for Meteora Dynamic Bonding Curve pools.</strong></p>
   <p>Non-custodial Solana liquidity planning, launch operations, transaction review, and verifiable provenance.</p>
