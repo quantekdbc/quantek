@@ -5,10 +5,10 @@ import {
   Transaction,
   TransactionInstruction,
 } from '@solana/web3.js';
-import {DOMAINS, H, fromHex, hex, utf8} from './pq';
+import {DOMAINS, H, fromHex, hex, utf8, PQ_PARAMETERS} from './pq';
 
 export const QUANTEK_QUANTUM_WALLET_PROGRAM_ID =
-  (import.meta.env.VITE_QUANTEK_QUANTUM_WALLET_PROGRAM_ID as string | undefined)?.trim() || null;
+  ((import.meta.env as Record<string,string|undefined>)['VITE_QUANTEK_QUANTUM_WALLET_PROGRAM_ID'])?.trim() || null;
 
 export const QUANTUM_WALLET_STATUS = QUANTEK_QUANTUM_WALLET_PROGRAM_ID
   ? 'Verifier configured'
@@ -217,3 +217,67 @@ export function quantumWalletSpendDigest(args:{
 }
 
 export function canExecuteLive(){return configuredQuantumWalletProgramId()!==null}
+
+
+/* Compatibility helpers retained for existing QUANTEK UI/tests while the
+ * canonical setup flow migrates to the live program adapter above. */
+export type AssetRow = {
+  symbol:string;
+  mint:string;
+  program:'Native'|'SPL Token'|'Token-2022';
+  amount:number;
+  decimals:number;
+};
+export type LegacyVaultState='active'|'staged'|'consumed'|'pending';
+export type LegacyVault={index:number;leaf:number;publicKeyHash:string;addressPreview:string;state:LegacyVaultState};
+export type LegacyWithdrawalIntent={recipient:string;mint:string;amount:number;vaultIndex:number};
+export type LegacyCommitment={digest:string;nextVaultHash:string;namespace:string;fields:Record<string,string>};
+
+export function vaultPublicKeyHash(leafPublicHash:string){
+  return hex(H(utf8(DOMAINS.quantumWallet),utf8('vault-pkh'),utf8(leafPublicHash)));
+}
+export function vaultAddressPreview(pkh:string){
+  return `vault-authority:${pkh.slice(0,8)}…${pkh.slice(-8)}`;
+}
+export function vaultChain(identityRoot:string,count=4,consumed=0):LegacyVault[]{
+  return Array.from({length:count},(_,i)=>{
+    const pkh=vaultPublicKeyHash(hex(H(utf8(identityRoot),utf8(`leaf:${i+1}`))));
+    return {index:i,leaf:i+1,publicKeyHash:pkh,addressPreview:vaultAddressPreview(pkh),state:i<consumed?'consumed':i===consumed?'active':'pending'};
+  });
+}
+export function withdrawalCommitment(intent:LegacyWithdrawalIntent,vaults:LegacyVault[]):LegacyCommitment{
+  const next=vaults[intent.vaultIndex+1];
+  if(!next)throw new Error('No next authority leaf available.');
+  const fields={
+    namespace:DOMAINS.quantumWallet,
+    program:QUANTEK_QUANTUM_WALLET_PROGRAM_ID??'unconfigured',
+    vault:String(intent.vaultIndex),
+    recipient:intent.recipient,
+    mint:intent.mint,
+    amount:String(intent.amount),
+    nextVault:next.publicKeyHash,
+  };
+  const digest=hex(H(...Object.entries(fields).map(([k,v])=>utf8(`${k}=${v};`))));
+  return {digest,nextVaultHash:next.publicKeyHash,namespace:DOMAINS.quantumWallet,fields};
+}
+export function stagingPlan(bytes:number=PQ_PARAMETERS.signatureBytes){
+  const chunkBytes=900;
+  const chunks=Math.ceil(bytes/chunkBytes);
+  return Array.from({length:chunks},(_,i)=>({chunk:i+1,from:i*chunkBytes,to:Math.min(bytes,(i+1)*chunkBytes)}));
+}
+export class ProtocolNotDeployedError extends Error{
+  constructor(){
+    super('Quantum Wallet verifier setup required. Deploy/configure the QUANTEK verifier before live custody.');
+    this.name='ProtocolNotDeployedError';
+  }
+}
+export function createQuantumWalletAdapter(){
+  const refuse=async():Promise<never>=>{throw new ProtocolNotDeployedError()};
+  return {
+    programId:QUANTEK_QUANTUM_WALLET_PROGRAM_ID,
+    deployed:canExecuteLive(),
+    buildDeposit:refuse,
+    buildStageSignature:refuse,
+    buildWithdraw:refuse,
+  };
+}
