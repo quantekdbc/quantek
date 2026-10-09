@@ -1,129 +1,39 @@
-import { useMemo, useState } from "react";
-import { ArrowUpRight, BookOpen, Search, ShieldCheck } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { PageHeading, Panel } from "./controls";
+import {useMemo,useState,type ReactNode} from 'react';
+import {Search,Github,ArrowUpRight} from 'lucide-react';
+import {PageHeading} from './controls';
+import {GITHUB_URL} from '@/lib/quantek/data';
+import {DBC_PROGRAM_ID} from '@/lib/quantek/dbc';
+import {DOMAINS} from '@/lib/quantek/pq';
 
-type DocSection = { id: string; title: string; kicker: string; body: string[]; code?: string };
-
-const sections: readonly DocSection[] = [
-  { id: "overview", title: "Overview", kicker: "PROTOCOL MAP", body: [
-    "QUANTEK combines a Solana-native Meteora DBC operations console with hash-based identity and provenance. Standard Launch and Quantum Launch share the same DBC execution path; Quantum Launch adds an independently verifiable attestation layer.",
-    "The platform is non-custodial. Wallet signing remains client-controlled, and a proof of provenance is never presented as a replacement for Solana transaction authorization.",
-  ]},
-  { id: "threat", title: "Threat Model", kicker: "ASSUMPTIONS", body: [
-    "QUANTEK treats RPC mismatch, transaction mutation, stale blockhashes, malformed proofs, WOTS leaf reuse, and misleading demo/live state as security failures.",
-    "A compromised operating system, malicious wallet extension, Solana consensus failure, or third-party protocol vulnerability remains outside what a browser application can fully defend against.",
-  ]},
-  { id: "primitives", title: "Cryptographic Primitives", kicker: "SHA-256 ROOT", body: [
-    "The root identity model uses SHA-256, WOTS with w=16, 67 chains, and an XMSS-style height-8 Merkle tree. Public identity material is the root plus public seed.",
-    "QUANTEK uses its own domain-separated namespaces so signatures cannot be replayed as another protocol's messages.",
-  ], code: "quantek.network/identity/v1\nquantek.network/launch/v1\nquantek.network/proof/v1\nquantek.network/quantum-wallet/v1"},
-  { id: "wots", title: "WOTS-16", kicker: "ONE-TIME SIGNATURE", body: [
-    "A 32-byte digest becomes 64 base-16 message digits plus three checksum digits, producing 67 WOTS chains. A full Merkle-authenticated identity signature is 2,404 bytes.",
-    "Every WOTS leaf is one-time. Once a leaf is consumed, clients must refuse to sign with it again.",
-  ], code: "w = 16\nchains = 67\nchain steps = 15\nsignature = 2,404 bytes"},
-  { id: "identity", title: "Merkle Identity", kicker: "QTK1 ADDRESS", body: [
-    "A QUANTEK identity is represented by a qtk1 address, Merkle root, public seed, and a 256-leaf budget. The address belongs to the QUANTEK namespace rather than an external identity format.",
-    "The tree can support provenance attestations, registration proofs, and challenge-response ownership proofs.",
-  ]},
-  { id: "derive", title: "Derivation & Hardening", kicker: "LOCAL ONLY", body: [
-    "The intended derivation starts from a deterministic wallet message signature. An optional passphrase is hardened with scrypt before HKDF-SHA256 seed expansion.",
-    "Raw identity seeds and passphrases must remain in browser memory. Public metadata and consumed leaf indexes may be persisted separately.",
-  ], code: "scrypt: N = 2^15, r = 8, p = 1\nKDF: HKDF-SHA256"},
-  { id: "registration", title: "Registration", kicker: "GENESIS BINDING", body: [
-    "Registration binds the connected Solana wallet to the qtk address, root, and public seed. The model reserves leaf 0 for the genesis binding.",
-    "Until QUANTEK operates a synchronized public identity ledger, the browser experience is explicitly a Local Registration Profile rather than a global registration claim.",
-  ]},
-  { id: "anchor", title: "Solana Anchor", kicker: "PUBLIC TIMESTAMP", body: [
-    "An identity root can be timestamped through an SPL Memo signed by the connected wallet. QUANTEK prepares the memo through the same review and signing boundary as other transactions.",
-    "The UI must not say an anchor exists until the transaction is actually confirmed.",
-  ], code: "quantek:v1:identity:<qtk-address>:<root>"},
-  { id: "standard-launch", title: "Standard Launch", kicker: "METEORA DBC", body: [
-    "Standard Launch configures the token, curve, fees, DAMM v2 migration, quote market, optional first buy, and immutable transaction review without requiring a post-quantum attestation.",
-    "All live construction remains subject to active-RPC account validation and wallet-controlled signing.",
-  ]},
-  { id: "quantum-launch", title: "Quantum Launch", kicker: "ATTESTATION SEAL", body: [
-    "Quantum Launch uses the same Meteora DBC launch path and adds a QUANTEK Identity attestation over the launch identity. The review surface exposes the qtk identity, root, selected scheme, leaf budget, digest, and metadata proof envelope.",
-    "Schemes that are not wired to production key generation and verification remain visibly marked as pending rather than simulated as valid.",
-  ]},
-  { id: "schemes", title: "Signature Schemes", kicker: "ROOT + CERTIFIED KEYS", body: [
-    "The WOTS/Merkle identity is the root of trust. ML-DSA-65 and SLH-DSA-SHA2-128s can be represented as many-time keys certified once by a WOTS leaf when the production implementation is complete.",
-    "FN-DSA/Falcon and hybrid modes must be labeled experimental until their QUANTEK integration and standardization status justify stronger claims.",
-  ]},
-  { id: "proof", title: "Proof of Possession", kicker: "CHALLENGE / RESPONSE", body: [
-    "A challenge proof signs a fresh nonce-bound digest with the next unused identity leaf. Verification recomputes the WOTS public endpoints and Merkle path back to the registered root.",
-    "Nonce expiry and one-time leaf consumption are separate replay defenses.",
-  ]},
-  { id: "wallets", title: "Quantum Wallets", kicker: "ON-CHAIN VERIFIER REQUIRED", body: [
-    "Quantum Wallets are a dedicated custody design, not a rebrand of a browser wallet. A live implementation requires a Solana program that directly verifies the hash-signature authority controlling a vault.",
-    "QUANTEK currently exposes readiness and proof UX only. Live deposits and withdrawals remain disabled until QUANTEK deploys and audits its own verifier program.",
-  ]},
-  { id: "dbc", title: "Meteora DBC", kicker: "DAMM V2", body: [
-    "QUANTEK uses Meteora Dynamic Bonding Curve as the launch primitive. New configs target DAMM v2, expose partner/creator fee flows, and can use configurable quote mints.",
-    "Modern DBC SDK releases support arbitrary quote decimals. Quote mints outside permissionless-supported sets may require a token-badge remaining account.",
-  ], code: "program: dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN\nmigration: MET_DAMM_V2"},
-  { id: "rwa", title: "Tokenized Market Quotes", kicker: "SOLANA RWA", body: [
-    "The launch quote selector includes a 61-mint Solana xStocks discovery snapshot plus a validated custom-mint path for current tokenized-market assets from other issuers.",
-    "Every selected mint must be re-validated on the active RPC before live construction. Issuer and jurisdiction restrictions remain external eligibility constraints.",
-  ]},
-  { id: "review", title: "Transaction Review Model", kicker: "BYTE INTEGRITY", body: [
-    "QUANTEK freezes the serialized message shown for review, verifies RPC network identity and blockhash validity, simulates the exact reviewed transaction, and checks that wallet-returned signed bytes contain the same message.",
-    "Submission is a separate operation. A signing helper must never silently broadcast.",
-  ]},
-  { id: "boundaries", title: "Security Boundaries", kicker: "NO FALSE CLAIMS", body: [
-    "Quantum provenance authenticates launch or identity claims. It does not make ordinary ed25519-controlled funds quantum-safe.",
-    "Demo data, local proof examples, and protocol-readiness views are labeled as such. No view may fabricate mainnet success.",
-  ]},
-  { id: "parameters", title: "Parameters", kicker: "REFERENCE V1", body: [
-    "The v1 identity reference uses SHA-256, WOTS w=16, 67 chains, Merkle height 8, and 256 leaves. The local passphrase-hardening target is scrypt N=2^15, r=8, p=1.",
-    "Concrete production serialization and test vectors must be frozen before a live attestation format is considered stable.",
-  ]},
-  { id: "verify", title: "Verification Examples", kicker: "PROOF TRACE", body: [
-    "A WOTS trace parses public proof material, recomputes the launch or challenge digest, finishes 67 WOTS chains, compresses the leaf, climbs eight Merkle levels, and compares the computed root.",
-    "Scheme-certified keys first verify the WOTS certificate against the identity root, then verify the many-time signature using the certified public key.",
-  ]},
+type Doc={id:string;title:string;group:string;body:ReactNode;text:string};
+const code=(s:string)=><pre className="code-block">{s}</pre>;
+const D=(id:string,title:string,group:string,paras:string[],extra?:string):Doc=>({id,title,group,text:(title+' '+paras.join(' ')+' '+(extra??'')).toLowerCase(),body:<>{paras.map((p,i)=>p.startsWith('- ')?<ul key={i}>{p.split('\n').map(l=><li key={l}>{l.replace(/^- /,'')}</li>)}</ul>:<p key={i}>{p}</p>)}{extra&&code(extra)}</>});
+export const DOCS:Doc[]=[
+D('overview','Overview','Foundations',['QUANTEK is a launch and liquidity operations console for Meteora Dynamic Bonding Curve pools on Solana, with an optional hash-based provenance layer.','Two halves: the Console (agent, pools, positions, fees, activity) and the Product (launch, identity, Quantum Wallets, verification, docs). Every chain write passes through one review model and is signed by your wallet in the browser.']),
+D('threat-model','Threat Model','Foundations',['- Adversary may hold a large quantum computer able to break ed25519 and ECDSA.\n- Adversary controls the network and may serve forged metadata.\n- QUANTEK servers are not trusted with secrets — none exist in this build.\n- Users may reuse a one-time key by mistake; the ledger must refuse.','Out of scope: compromise of the device running the browser, and protection of ordinary Solana balances (see Security Boundaries).']),
+D('primitives','Cryptographic Primitives','Cryptography',['SHA-256 is the only hash. HKDF-SHA256 expands seeds; scrypt hardens optional passphrases. Every hash call is domain-separated with a QUANTEK namespace string.'],Object.values(DOMAINS).join('\n')),
+D('wots','WOTS-16','Cryptography',['A Winternitz one-time signature with w=16. A 32-byte digest yields 64 base-16 digits; a 3-digit checksum prevents forgeries that only advance chains, for 67 chains in total.','Signing reveals each chain at position d_i; verifying finishes the remaining 15−d_i steps and recovers the public key.'],'digits   = base16(H(domain ‖ 0x00 ‖ msg))           // 64\nchecksum = Σ (15 − d_i) → 3 base16 digits          // 67 total\nsig_i    = F^{d_i}(sk_i)\npk_i     = F^{15−d_i}(sig_i)\nF(x)     = SHA-256(proofDomain ‖ pubSeed ‖ leaf ‖ i ‖ j ‖ x)'),
+D('merkle','Merkle Identity','Cryptography',['256 WOTS public keys are hashed into leaves and combined into a binary tree of height 8. The root, together with the public seed, is the identity. A signature carries its leaf index and 8 sibling nodes.'],'size = 4 (leaf) + 67×32 (chains) + 8×32 (path) = 2,404 bytes'),
+D('derivation','Derivation & Hardening','Identity',['Your wallet signs a fixed, human-readable QUANTEK message. The signature never leaves the tab: it is hashed, optionally hardened with scrypt (N=2^15, r=8, p=1), then expanded with HKDF-SHA256 into a secret seed and a public seed.','Determinism means the same wallet + passphrase re-derives the same identity on any device. Losing the passphrase loses the identity.'],`ikm  = SHA-256(walletSig)\nikm  = scrypt(pass, "${DOMAINS.identity}" ‖ ikm, N=2^15, r=8, p=1)\nokm  = HKDF-SHA256(ikm, salt="${DOMAINS.identity}", info="qtk-seed", 64)\naddr = "qtk1" ‖ base32(H(domain, root, pubSeed)[..20]) ‖ check`),
+D('registration','Registration','Identity',['Registration binds a Solana wallet to a qtk1 address with dual authorization: the wallet signed the derivation message, and leaf #0 signs the binding. In this build the result is a Local Registration Profile; no server ledger exists.']),
+D('anchor','Solana Anchor','Identity',['An anchor publishes your root as an SPL Memo, giving it a public timestamp. It goes through prepare → review → simulate → wallet sign. An anchor exists only after confirmation is observed on-chain.'],'quantek:v1:identity:<qtk1-address>:<root>'),
+D('standard-launch','Standard Launch','Launch',['A Meteora DBC launch: config, curve, fees, DAMM v2 migration, quote market and optional first buy. No attestation is attached.']),
+D('quantum-launch','Quantum Launch','Launch',['A Standard Launch plus an Attestation Seal. The canonical launch description is hashed under the launch domain and signed by the next unused identity leaf. The seal is placed in token metadata extensions so anyone can verify it offline.'],`metadata.extensions["${DOMAINS.launch}"] = {\n  scheme, identity, root, publicSeed, launchDigest, proof\n}`),
+D('schemes','Signature Schemes','Launch',['- QUANTEK Root — WOTS-16 + Merkle h=8. One-time, 2,404 B. Root of trust; reference implementation wired.\n- ML-DSA-65 (FIPS 204) — many-time lattice scheme; to be certified by a WOTS leaf. Implementation pending.\n- SLH-DSA-SHA2-128s (FIPS 205) — stateless hash-based; certified by a WOTS leaf. Implementation pending.\n- FN-DSA / Falcon-512 — experimental; not a final FIPS standard.\n- Hybrid ed25519 + ML-DSA-65 — advanced experimental.']),
+D('possession','Proof of Possession','Identity',['A challenge-response: a random nonce is bound to your address, root and leaf index, then signed by one fresh leaf. The verifier recomputes the root. Each proof consumes a leaf permanently.']),
+D('quantum-wallets','Quantum Wallets','Custody',['A vault chain where each vault is controlled by one WOTS key. A spend commits to recipient, mint, amount, next-vault hash and the program/version namespace; the remainder rolls to the next vault and the spent vault becomes a tombstone.','Signatures are staged in chunks because they exceed a single packet. QUANTEK has not deployed a verifier program; the feature is readiness-only.']),
+D('dbc','Meteora DBC','Protocol',['QUANTEK uses @meteora-ag/dynamic-bonding-curve-sdk 1.5.13. New configs always migrate to DAMM v2 (MigrationOption.MET_DAMM_V2); DAMM v1 is not offered.','- partner.createConfig / createConfigAndPoolWithFirstBuy\n- creator.createPool / createPoolWithFirstBuy / createPoolWithPartnerAndCreatorFirstBuy\n- state.getPool / getPoolConfig / progress / fee metrics\n- migration.migrateToDammV2 · partner/creator fee claims'],`program: ${DBC_PROGRAM_ID}`),
+D('tokenized-quotes','Tokenized Market Quotes','Protocol',['PoolConfig accepts any quote mint and, since SDK 1.5.13, any decimals. QUANTEK ships a 61-asset xStocks snapshot and accepts additional mints such as Ondo Global Markets assets after RPC validation.','Mints outside the permissionless set may need a DBC token badge passed as a remaining account (SDK 1.5.12+). Availability and transfer restrictions depend on the issuer and jurisdiction.']),
+D('review-model','Transaction Review Model','Security',['- SDK builds an unsigned transaction.\n- QUANTEK assigns fee payer and recent blockhash, then freezes the message bytes.\n- Simulation runs without replacing the blockhash.\n- Genesis hash, fee payer, validity height and bytes are re-checked.\n- The wallet signs; returned bytes must match the reviewed message exactly.\n- Submission is a separate explicit step.']),
+D('boundaries','Security Boundaries','Security',['Hash-based provenance proves who launched or attested something. It does not make ordinary Solana funds quantum-safe: ed25519 still authorizes every normal account. Quantum-protected custody requires a dedicated on-chain WOTS verifier vault, which QUANTEK has not deployed.','The demo identity uses a published secret and is labeled everywhere. Secrets and passphrases are never persisted; only consumed leaf indexes and public metadata are stored.']),
+D('parameters','Parameters','Reference',[''],`w = 16          n = 32 B        chains = 67\nheight = 8      leaves = 256    signature = 2,404 B\nscrypt N=2^15 r=8 p=1           HKDF-SHA256\nprefix = qtk1\n${Object.entries(DOMAINS).map(([k,v])=>`${k.padEnd(14)} ${v}`).join('\n')}`),
+D('examples','Verification Examples','Reference',['Open Verify, pick a category and load the valid or tampered demo. The tampered example changes one character of the message; the recomputed root diverges at the first chain and the result is Invalid.'],'{ "kind": "quantek-wots16-merkle-v1", "domain": "quantek.network/proof/v1",\n  "leaf": 7, "publicSeed": "…", "root": "…",\n  "signature": [67 × 32-byte hex], "authPath": [8 × 32-byte hex] }'),
 ];
 
-export function DocsPage() {
-  const [active, setActive] = useState("overview");
-  const [query, setQuery] = useState("");
-  const visible = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return sections;
-    return sections.filter((section) => [section.title, section.kicker, ...section.body].join(" ").toLowerCase().includes(q));
-  }, [query]);
-  const section = sections.find((item) => item.id === active) ?? visible[0] ?? sections[0];
-
-  return (
-    <>
-      <PageHeading
-        eyebrow="QUANTEK / TECHNICAL REFERENCE"
-        title="Docs"
-        description="Protocol architecture, launch mechanics, identity, Quantum Wallets, Meteora DBC, and security boundaries in QUANTEK's own namespace."
-        action={<Button asChild variant="outline"><a href="https://github.com/quantekdbc/quantek/tree/main/docs" target="_blank" rel="noreferrer">Repository docs <ArrowUpRight /></a></Button>}
-      />
-      <div className="strategy-layout">
-        <aside>
-          <Panel title="Documentation index" tag={String(visible.length) + " SECTIONS"}>
-            <div className="instrument-body">
-              <div className="search-field mb-4"><Search aria-hidden="true" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search documentation" aria-label="Search QUANTEK documentation" /></div>
-              <nav className="command-list" aria-label="Documentation sections">
-                {visible.map((item) => <button key={item.id} type="button" className={"text-left " + (active === item.id ? "bg-secondary" : "")} onClick={() => setActive(item.id)}><span>{item.title}</span></button>)}
-              </nav>
-            </div>
-          </Panel>
-        </aside>
-        <article>
-          <Panel title={section?.title ?? "Docs"} tag={section?.kicker}>
-            <div className="instrument-body">
-              <BookOpen size={24} className="mb-5" />
-              {section?.body.map((paragraph) => <p key={paragraph} className="text-sm leading-8 text-muted-foreground mb-5">{paragraph}</p>)}
-              {section?.code && <pre className="code-block">{section.code}</pre>}
-              {section?.id === "boundaries" && <div className="notice mt-5"><ShieldCheck size={16}/>Security claims in QUANTEK should remain narrower than the code actually implements.</div>}
-            </div>
-          </Panel>
-        </article>
-      </div>
-    </>
-  );
-}
+export function DocsPage(){const[q,setQ]=useState('');const[active,setActive]=useState('overview');const list=useMemo(()=>{const s=q.trim().toLowerCase();return s?DOCS.filter(d=>d.text.includes(s)):DOCS},[q]);
+const go=(id:string)=>{setActive(id);document.getElementById(`doc-${id}`)?.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})};
+return <><PageHeading eyebrow="DOCS / TECHNICAL REFERENCE" title="QUANTEK Documentation" description="Protocol model, cryptography, launch mechanics and security boundaries." action={<a className="protocol-badge" href={GITHUB_URL} target="_blank" rel="noopener noreferrer"><Github size={12}/>quantekdbc/quantek<ArrowUpRight size={10}/></a>}/>
+<div className="search-field mb-6" style={{maxWidth:520}}><Search/><input aria-label="Search documentation" placeholder="Search documentation…" value={q} onChange={e=>setQ(e.target.value)}/></div>
+<div className="docs-mobile"><select aria-label="Jump to section" value={active} onChange={e=>go(e.target.value)}>{list.map(d=><option key={d.id} value={d.id}>{d.group} · {d.title}</option>)}</select></div>
+<div className="docs-layout"><nav className="docs-index" aria-label="Documentation sections">{list.map(d=><a key={d.id} href={`#doc-${d.id}`} className={active===d.id?'active':''} onClick={e=>{e.preventDefault();go(d.id)}}>{d.title}</a>)}<a href={`${GITHUB_URL}/tree/main/docs`} target="_blank" rel="noopener noreferrer">Repository docs ↗</a></nav>
+<article className="docs-article">{list.length?list.map(d=><section key={d.id} id={`doc-${d.id}`} aria-labelledby={`h-${d.id}`}><div className="eyebrow">{d.group.toUpperCase()}</div><h2 id={`h-${d.id}`}>{d.title}</h2>{d.body}</section>):<div className="empty-state" role="status">No sections match “{q}”.</div>}<section><p>Source, issues and repository documentation: <a className="underline" href={GITHUB_URL} target="_blank" rel="noopener noreferrer">{GITHUB_URL}</a> · <a className="underline" href={`${GITHUB_URL}/blob/main/README.md`} target="_blank" rel="noopener noreferrer">README</a> · <a className="underline" href={`${GITHUB_URL}/blob/main/AGENTS.md`} target="_blank" rel="noopener noreferrer">AGENTS.md</a></p></section></article></div></>}
