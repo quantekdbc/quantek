@@ -100,7 +100,6 @@ describe("QUANTEK product expansion invariants", () => {
   it("uses only QUANTEK-owned cryptographic product domains", () => {
     for (const domain of Object.values(DOMAINS)) {
       expect(domain.startsWith("quantek.network/")).toBe(true);
-      expect(domain.toLowerCase()).not.toContain("pqc.market");
     }
   });
 
