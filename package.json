@@ -11,7 +11,9 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run lint && npm run typecheck && npm run test && npm run build"
   },
   "overrides": {
     "rolldown": "1.2.1"
@@ -96,5 +98,28 @@
     "typescript-eslint": "^8.56.1",
     "vite": "8.1.5",
     "vitest": "^4.1.10"
-  }
+  },
+  "version": "0.1.0-alpha.0",
+  "description": "Non-custodial Solana liquidity operations and post-quantum provenance for Meteora DBC pools.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/quantekdbc/quantek.git"
+  },
+  "engines": {
+    "node": ">=22",
+    "npm": ">=10"
+  },
+  "keywords": [
+    "solana",
+    "meteora",
+    "meteora-dbc",
+    "liquidity",
+    "defi",
+    "post-quantum",
+    "wots",
+    "xmss",
+    "typescript",
+    "non-custodial"
+  ]
 }
