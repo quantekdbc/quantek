@@ -12,11 +12,13 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ActivityRouteImport } from './routes/activity'
 import { Route as AgentRouteImport } from './routes/agent'
+import { Route as DocsRouteImport } from './routes/docs'
 import { Route as FeesRouteImport } from './routes/fees'
 import { Route as IdentityRouteImport } from './routes/identity'
 import { Route as LaunchRouteImport } from './routes/launch'
 import { Route as PoolsRouteImport } from './routes/pools'
 import { Route as PositionsRouteImport } from './routes/positions'
+import { Route as QuantumWalletsRouteImport } from './routes/quantum-wallets'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as VerifyRouteImport } from './routes/verify'
 
@@ -33,6 +35,11 @@ const ActivityRoute = ActivityRouteImport.update({
 const AgentRoute = AgentRouteImport.update({
   id: '/agent',
   path: '/agent',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DocsRoute = DocsRouteImport.update({
+  id: '/docs',
+  path: '/docs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FeesRoute = FeesRouteImport.update({
@@ -60,6 +67,11 @@ const PositionsRoute = PositionsRouteImport.update({
   path: '/positions',
   getParentRoute: () => rootRouteImport,
 } as any)
+const QuantumWalletsRoute = QuantumWalletsRouteImport.update({
+  id: '/quantum-wallets',
+  path: '/quantum-wallets',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -75,11 +87,13 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/activity': typeof ActivityRoute
   '/agent': typeof AgentRoute
+  '/docs': typeof DocsRoute
   '/fees': typeof FeesRoute
   '/identity': typeof IdentityRoute
   '/launch': typeof LaunchRoute
   '/pools': typeof PoolsRoute
   '/positions': typeof PositionsRoute
+  '/quantum-wallets': typeof QuantumWalletsRoute
   '/settings': typeof SettingsRoute
   '/verify': typeof VerifyRoute
 }
@@ -87,11 +101,13 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/activity': typeof ActivityRoute
   '/agent': typeof AgentRoute
+  '/docs': typeof DocsRoute
   '/fees': typeof FeesRoute
   '/identity': typeof IdentityRoute
   '/launch': typeof LaunchRoute
   '/pools': typeof PoolsRoute
   '/positions': typeof PositionsRoute
+  '/quantum-wallets': typeof QuantumWalletsRoute
   '/settings': typeof SettingsRoute
   '/verify': typeof VerifyRoute
 }
@@ -100,11 +116,13 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/activity': typeof ActivityRoute
   '/agent': typeof AgentRoute
+  '/docs': typeof DocsRoute
   '/fees': typeof FeesRoute
   '/identity': typeof IdentityRoute
   '/launch': typeof LaunchRoute
   '/pools': typeof PoolsRoute
   '/positions': typeof PositionsRoute
+  '/quantum-wallets': typeof QuantumWalletsRoute
   '/settings': typeof SettingsRoute
   '/verify': typeof VerifyRoute
 }
@@ -114,11 +132,13 @@ export interface FileRouteTypes {
     | '/'
     | '/activity'
     | '/agent'
+    | '/docs'
     | '/fees'
     | '/identity'
     | '/launch'
     | '/pools'
     | '/positions'
+    | '/quantum-wallets'
     | '/settings'
     | '/verify'
   fileRoutesByTo: FileRoutesByTo
@@ -126,11 +146,13 @@ export interface FileRouteTypes {
     | '/'
     | '/activity'
     | '/agent'
+    | '/docs'
     | '/fees'
     | '/identity'
     | '/launch'
     | '/pools'
     | '/positions'
+    | '/quantum-wallets'
     | '/settings'
     | '/verify'
   id:
@@ -138,11 +160,13 @@ export interface FileRouteTypes {
     | '/'
     | '/activity'
     | '/agent'
+    | '/docs'
     | '/fees'
     | '/identity'
     | '/launch'
     | '/pools'
     | '/positions'
+    | '/quantum-wallets'
     | '/settings'
     | '/verify'
   fileRoutesById: FileRoutesById
@@ -151,11 +175,13 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ActivityRoute: typeof ActivityRoute
   AgentRoute: typeof AgentRoute
+  DocsRoute: typeof DocsRoute
   FeesRoute: typeof FeesRoute
   IdentityRoute: typeof IdentityRoute
   LaunchRoute: typeof LaunchRoute
   PoolsRoute: typeof PoolsRoute
   PositionsRoute: typeof PositionsRoute
+  QuantumWalletsRoute: typeof QuantumWalletsRoute
   SettingsRoute: typeof SettingsRoute
   VerifyRoute: typeof VerifyRoute
 }
@@ -181,6 +207,13 @@ declare module '@tanstack/react-router' {
       path: '/agent'
       fullPath: '/agent'
       preLoaderRoute: typeof AgentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/docs': {
+      id: '/docs'
+      path: '/docs'
+      fullPath: '/docs'
+      preLoaderRoute: typeof DocsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/fees': {
@@ -218,6 +251,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PositionsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/quantum-wallets': {
+      id: '/quantum-wallets'
+      path: '/quantum-wallets'
+      fullPath: '/quantum-wallets'
+      preLoaderRoute: typeof QuantumWalletsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings': {
       id: '/settings'
       path: '/settings'
@@ -239,11 +279,13 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ActivityRoute: ActivityRoute,
   AgentRoute: AgentRoute,
+  DocsRoute: DocsRoute,
   FeesRoute: FeesRoute,
   IdentityRoute: IdentityRoute,
   LaunchRoute: LaunchRoute,
   PoolsRoute: PoolsRoute,
   PositionsRoute: PositionsRoute,
+  QuantumWalletsRoute: QuantumWalletsRoute,
   SettingsRoute: SettingsRoute,
   VerifyRoute: VerifyRoute,
 }

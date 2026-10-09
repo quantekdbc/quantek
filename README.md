@@ -19,11 +19,12 @@
 
 ## What QUANTEK is
 
-QUANTEK is a browser-first operations console for Solana launches and liquidity workflows built around Meteora's Dynamic Bonding Curve (DBC).
+QUANTEK is a browser-first operations console for Solana launches and liquidity workflows built around Meteora's Dynamic Bonding Curve (DBC). The product now includes Standard Launch, Quantum Launch, qtk1 Identity, Quantum Wallet protocol readiness, independent proof verification, and tokenized-market quote assets.
 
 It combines:
 
-- DBC launch configuration and migration planning;
+- Standard and Quantum DBC launch configuration and DAMM v2 migration planning;
+- crypto and tokenized-stock/ETF quote markets with live RPC mint validation;
 - deterministic liquidity-agent strategy previews;
 - wallet-standard client-side signing boundaries;
 - exact transaction-review byte checks;
@@ -69,6 +70,12 @@ See [Architecture](./docs/ARCHITECTURE.md) for the complete model.
 
 | Area | Current state |
 | --- | --- |
+| Standard Launch on Meteora DBC | Implemented |
+| Quantum Launch + QUANTEK Attestation Seal | Implemented (WOTS reference path) |
+| 61 xStocks tokenized-market quote presets | Implemented; live RPC verification required |
+| qtk1 Identity Derive / Register / Anchor / Prove | Implemented as local reference identity |
+| Quantum Wallet protocol UX | Implemented; on-chain verifier **not deployed** |
+| In-app technical Docs | Implemented |
 | Meteora DBC SDK adapter | Implemented |
 | DBC program ownership checks | Implemented |
 | DAMM v2 default migration policy | Implemented |
@@ -205,6 +212,11 @@ Read the [Threat model](./docs/THREAT_MODEL.md) and [Testing guide](./docs/TESTI
 | [Getting Started](./docs/GETTING_STARTED.md) | local development and demo semantics |
 | [Architecture](./docs/ARCHITECTURE.md) | components, service boundaries, trust model |
 | [Meteora DBC](./docs/METEORA_DBC.md) | SDK integration and migration policy |
+| [Launch](./docs/LAUNCH.md) | Standard/Quantum DBC launch lifecycle |
+| [Quantum Launch](./docs/QUANTUM_LAUNCH.md) | QUANTEK attestation model |
+| [Identity](./docs/IDENTITY.md) | qtk1 derivation, registration, anchor and proofs |
+| [Quantum Wallets](./docs/QUANTUM_WALLETS.md) | one-time WOTS vault-chain architecture |
+| [Tokenized Markets](./docs/TOKENIZED_MARKETS.md) | RWA quote-mint validation and policy |
 | [Liquidity Agent](./docs/LIQUIDITY_AGENT.md) | strategy model and guardrails |
 | [Transaction Model](./docs/TRANSACTION_MODEL.md) | construction, review, simulation, signing |
 | [PQ Identity](./docs/PQ_IDENTITY.md) | WOTS/Merkle provenance model |

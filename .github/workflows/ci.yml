@@ -25,7 +25,14 @@ jobs:
           node-version: 22
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm install --legacy-peer-deps --no-audit --no-fund
+
+      - name: QUANTEK branding boundary
+        run: |
+          if grep -RniE 'pqc\.market|pump\.fun|pump sdk|pq1' src; then
+            echo "External protocol branding leaked into QUANTEK source."
+            exit 1
+          fi
 
       - name: Lint
         run: npm run lint
