@@ -1,164 +1,32 @@
-import { useMemo, useState } from "react";
-import { ArrowRight, Boxes, Fingerprint, KeyRound, LockKeyhole, ShieldCheck, TriangleAlert, WalletCards } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Field, PageHeading, Panel } from "./controls";
-import {
-  QUANTEK_QUANTUM_WALLET_DOMAIN,
-  QUANTEK_QUANTUM_WALLET_PROGRAM_ID,
-  prepareQuantumWalletSpend,
-} from "@/lib/quantek/quantum-wallet";
+import {useMemo,useState} from 'react';
+import {Link} from '@tanstack/react-router';
+import {Vault,ShieldAlert,ArrowDownToLine,ArrowUpFromLine,Layers,RotateCw,History,Construction,LoaderCircle} from 'lucide-react';
+import {Button} from '@/components/ui/button';
+import {PageHeading,Panel,Field,InfoTip} from './controls';
+import {useConsole} from '@/lib/quantek/context';
+import {PQ_PARAMETERS,DOMAINS} from '@/lib/quantek/pq';
+import {isValidMint} from '@/lib/quantek/rwa';
+import {QUANTEK_QUANTUM_WALLET_PROGRAM_ID,QUANTUM_WALLET_STATUS,canExecuteLive,createQuantumWalletAdapter,stagingPlan,vaultChain,withdrawalCommitment,type AssetRow} from '@/lib/quantek/quantum-wallet';
 
-const demoHash = "7c".repeat(32);
+const ASSETS:AssetRow[]=[{symbol:'SOL',mint:'So11111111111111111111111111111111111111112',program:'Native',amount:0,decimals:9},{symbol:'USDC',mint:'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',program:'SPL Token',amount:0,decimals:6},{symbol:'PYUSD',mint:'2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo',program:'Token-2022',amount:0,decimals:6}];
+const TABS=['Overview','Create','Assets','Deposit','Withdraw','Staging','Rollover','History'] as const;
 
-export function QuantumWalletsPage() {
-  const [tab, setTab] = useState<"Overview" | "Assets" | "Withdraw" | "Proof Trace">("Overview");
-  const [recipient, setRecipient] = useState("");
-  const [amount, setAmount] = useState("0.01");
-  const [asset, setAsset] = useState<"SOL" | "Token">("SOL");
-  const [mint, setMint] = useState("");
-  const [error, setError] = useState("");
-  const [plan, setPlan] = useState<ReturnType<typeof prepareQuantumWalletSpend> | null>(null);
-
-  const status = useMemo(
-    () => (QUANTEK_QUANTUM_WALLET_PROGRAM_ID ? "Adapter configured" : "Protocol adapter not deployed"),
-    [],
-  );
-
-  function previewSpend() {
-    setError("");
-    setPlan(null);
-    try {
-      const numeric = Number(amount);
-      if (!Number.isFinite(numeric) || numeric <= 0) throw new Error("Enter a valid spend amount.");
-      const decimals = asset === "SOL" ? 9 : 6;
-      const amountAtomic = BigInt(Math.floor(numeric * 10 ** decimals));
-      const prepared = prepareQuantumWalletSpend({
-        vaultIndex: 0,
-        recipient,
-        asset:
-          asset === "SOL"
-            ? { kind: "sol", symbol: "SOL", mint: null, decimals: 9 }
-            : { kind: "token", symbol: "TOKEN", mint, decimals },
-        amountAtomic,
-        nextPublicKeyHash: demoHash,
-      });
-      setPlan(prepared);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not build Quantum Wallet preview.");
-    }
-  }
-
-  return (
-    <>
-      <PageHeading
-        eyebrow="QUANTUM CUSTODY / HASH-SIGNATURE AUTHORITY"
-        title="Quantum Wallets"
-        description="A QUANTEK design for one-time hash-signature vaults whose spending authority lives in an on-chain verifier rather than an ordinary ed25519 account."
-      />
-      <div className="notice mb-6">
-        <TriangleAlert size={17} />
-        <span><strong>{status}.</strong> QUANTEK does not yet expose live Quantum Wallet custody. This page models the protocol and review flow without pointing at a third-party vault program.</span>
-      </div>
-
-      <div className="segmented mb-6" role="tablist" aria-label="Quantum Wallet sections">
-        {(["Overview", "Assets", "Withdraw", "Proof Trace"] as const).map((value) => (
-          <Button key={value} variant="ghost" role="tab" aria-selected={tab === value} className={tab === value ? "selected" : ""} onClick={() => setTab(value)}>
-            {value}
-          </Button>
-        ))}
-      </div>
-
-      {tab === "Overview" && (
-        <div className="strategy-layout">
-          <Panel title="Quantum Wallet / 00" tag="REFERENCE STATE">
-            <div className="instrument-body">
-              <div className="identity-header">
-                <div className="agent-orbit"><LockKeyhole /></div>
-                <div><strong>One-time vault chain</strong><p>WOTS-16 · SHA-256 · rollover authority</p></div>
-              </div>
-              <div className="detail-rows">
-                <div><span>Protocol namespace</span><strong>{QUANTEK_QUANTUM_WALLET_DOMAIN}</strong></div>
-                <div><span>Program</span><strong>Not deployed</strong></div>
-                <div><span>Current vault</span><strong>#000 · preview only</strong></div>
-                <div><span>Spend state</span><strong>Unconsumed · reference</strong></div>
-                <div><span>Next vault</span><strong>#001 · rollover target</strong></div>
-              </div>
-              <div className="notice mt-5"><ShieldCheck size={16}/>A real one-time spend must consume the current vault and commit the remainder to the next vault. UI state alone is not sufficient; this must be enforced on-chain.</div>
-            </div>
-          </Panel>
-          <Panel title="Authority comparison" tag="SECURITY BOUNDARY">
-            <div className="instrument-body">
-              <div className="module-row"><div><strong>Connected Solana wallet</strong><p>Browser wallet remains authorized by Solana's ordinary signing model.</p></div><WalletCards /></div>
-              <div className="module-row"><div><strong>Quantum Wallet</strong><p>Requires a dedicated program that verifies the WOTS spend itself.</p></div><Fingerprint /></div>
-              <div className="module-row"><div><strong>QUANTEK Identity</strong><p>Provenance and proofs; not by itself custody authority.</p></div><KeyRound /></div>
-            </div>
-          </Panel>
-        </div>
-      )}
-
-      {tab === "Assets" && (
-        <Panel title="Vault assets" tag="DEMO INVENTORY">
-          <div className="instrument-body">
-            {[
-              ["SOL", "Native", "0.000000", "Deposit address pending protocol deployment"],
-              ["USDC", "SPL", "0.00", "Token account derived after vault program deployment"],
-              ["Token-2022", "Extension-aware", "—", "Additional accounts may be required"],
-            ].map(([symbol, type, balance, note]) => (
-              <div className="module-row" key={symbol}>
-                <div><strong>{symbol}</strong><p>{type} · {note}</p></div>
-                <span className="micro">{balance}</span>
-              </div>
-            ))}
-            <div className="notice mt-5"><Boxes size={16}/>Deposits remain disabled because QUANTEK has not deployed its own on-chain Quantum Wallet verifier. No deposit address is presented as live.</div>
-          </div>
-        </Panel>
-      )}
-
-      {tab === "Withdraw" && (
-        <div className="strategy-layout">
-          <Panel title="Prepare withdrawal" tag="READINESS PREVIEW">
-            <div className="instrument-body">
-              <Field label="Asset">
-                <select value={asset} onChange={(event) => setAsset(event.target.value as "SOL" | "Token")}><option>SOL</option><option>Token</option></select>
-              </Field>
-              {asset === "Token" && <div className="mt-5"><Field label="Token mint"><input value={mint} onChange={(event) => setMint(event.target.value)} placeholder="Solana mint address" /></Field></div>}
-              <div className="form-grid mt-5">
-                <Field label="Recipient"><input value={recipient} onChange={(event) => setRecipient(event.target.value)} placeholder="Solana address" /></Field>
-                <Field label="Amount"><input type="number" min="0" step="any" value={amount} onChange={(event) => setAmount(event.target.value)} /></Field>
-              </div>
-              {error && <div className="error-message" role="alert">{error}</div>}
-              <Button className="mt-5" onClick={previewSpend}>Generate readiness plan <ArrowRight /></Button>
-            </div>
-          </Panel>
-          <Panel title="One-time spend commitment" tag="NO LIVE EXECUTION">
-            <div className="instrument-body">
-              {plan ? <>
-                <div className="detail-rows">
-                  <div><span>Domain</span><strong>{plan.domain}</strong></div>
-                  <div><span>Recipient</span><strong>{plan.recipient.slice(0, 10)}…</strong></div>
-                  <div><span>Amount (atomic)</span><strong>{plan.amountAtomic}</strong></div>
-                  <div><span>Signature staging</span><strong>{plan.staging.suggestedChunks} chunks · reference</strong></div>
-                  <div><span>Rollover</span><strong>{plan.nextPublicKeyHash.slice(0, 12)}…</strong></div>
-                </div>
-                <div className="notice mt-4"><TriangleAlert size={16}/>{plan.warning}</div>
-              </> : <div className="empty-state">Create a readiness plan to inspect what a future on-chain Quantum Wallet spend must commit to.</div>}
-            </div>
-          </Panel>
-        </div>
-      )}
-
-      {tab === "Proof Trace" && (
-        <Panel title="Spend proof trace" tag="REFERENCE PIPELINE">
-          <div className="instrument-body">
-            <div className="verification-pipeline">
-              {["Intent", "Digest", "WOTS chains", "Public-key hash", "Vault authority", "Rollover"].map((name, index) => (
-                <div className="pipeline-step" key={name}><span className="block mb-3 font-mono">0{index + 1}</span>{name}</div>
-              ))}
-            </div>
-            <div className="notice mt-5"><Fingerprint size={16}/>A production verifier must rebuild the spend digest from instruction parameters, verify the staged WOTS payload, bind it to the current vault, and enforce one-time rollover on-chain.</div>
-          </div>
-        </Panel>
-      )}
-    </>
-  );
-}
+export function QuantumWalletsPage(){const c=useConsole();const[tab,setTab]=useState<(typeof TABS)[number]>('Overview');const[consumed,setConsumed]=useState(0);const[created,setCreated]=useState(false);const[w,setW]=useState({recipient:'',mint:ASSETS[0]!.mint,amount:''});const[err,setErr]=useState('');const[staged,setStaged]=useState(0);const[history,setHistory]=useState<{t:string;e:string}[]>([]);const[busy,setBusy]=useState(false);
+const root=c.identity?.root;const vaults=useMemo(()=>root?vaultChain(root,6,consumed):[],[root,consumed]);const active=vaults.find(v=>v.state==='active');
+const amount=Number(w.amount);const valid=isValidMint(w.recipient)&&isValidMint(w.mint)&&amount>0;
+const commitment=useMemo(()=>{if(!valid||!active)return null;try{return withdrawalCommitment({recipient:w.recipient,mint:w.mint,amount,vaultIndex:active.index},vaults)}catch{return null}},[valid,active,w,amount,vaults]);
+const chunks=stagingPlan();const adapter=createQuantumWalletAdapter();
+const log=(e:string)=>setHistory(h=>[{t:new Date().toISOString().slice(11,19),e},...h]);
+async function tryLive(kind:string){setBusy(true);setErr('');try{if(!active)throw new Error('No active vault.');if(kind==='deposit')await adapter.buildDeposit({vault:active,mint:w.mint,amount});else await adapter.buildWithdraw({recipient:w.recipient,mint:w.mint,amount,vaultIndex:active.index})}catch(e){setErr(e instanceof Error?e.message:String(e))}finally{setBusy(false)}}
+return <><PageHeading eyebrow="QUANTUM WALLETS / HASH-SIGNATURE VAULTS" title="Quantum Wallets" description="Custody designed around one-time WOTS keys: each vault spends exactly once and rolls its remainder into the next vault in the chain."/>
+<div className="notice mb-6"><Construction size={16}/><span><strong>{QUANTUM_WALLET_STATUS}.</strong> QUANTEK has not deployed an on-chain WOTS verifier program (program id: {String(QUANTEK_QUANTUM_WALLET_PROGRAM_ID)}). This section models the vault chain, commitments and signature staging locally. No deposit or withdrawal can execute.</span></div>
+<div className="segmented mb-6" style={{margin:'0 0 22px',flexWrap:'wrap'}} role="tablist" aria-label="Quantum Wallet sections">{TABS.map(t=><button key={t} role="tab" aria-selected={tab===t} className={tab===t?'selected':''} onClick={()=>{setTab(t);setErr('')}}>{t}</button>)}</div>
+{err&&<div className="error-message mb-4" role="alert">{err}</div>}
+{tab==='Overview'&&<div className="three-col"><Panel title="Ordinary Solana wallet" tag="ED25519"><div className="notice" style={{margin:19}}>Funds are authorized by an ed25519 signature. A sufficiently capable quantum computer could derive the private key from the public key. QUANTEK provenance signatures do not change this.</div></Panel><Panel title="Quantum Wallet vault" tag="WOTS-16 · ONE-TIME"><div className="notice" style={{margin:19}}>Funds sit in a program-owned vault that releases only on a valid hash-based signature over a full spend commitment. The key is single-use: every spend consumes the vault and moves the remainder forward.</div></Panel><Panel title="Roadmap" tag="REQUIRED"><div className="notice" style={{margin:19}}><ShieldAlert size={16}/>On-chain verifier required for live Quantum Wallet custody. It must be audited, deployed under a QUANTEK-controlled program id, and verify {PQ_PARAMETERS.signatureBytes}-byte signatures staged across transactions.</div></Panel></div>}
+{tab==='Create'&&<Panel title="Create Quantum Wallet" tag={created?'MODELED':'NOT CREATED'}><div className="instrument-body">{!c.identity?<div className="notice"><span>A Quantum Wallet chain is derived from a QUANTEK Identity Root. <Link to="/identity" className="underline">Open an identity →</Link></span></div>:<><div className="detail-rows"><div><span>Identity</span><strong>{c.identity.address}</strong></div><div><span>Namespace</span><strong>{DOMAINS.quantumWallet}</strong></div><div><span>Vault leaves</span><strong>#1 onward (leaf #0 is registration)</strong></div><div><span>Program</span><strong>Not deployed</strong></div></div><Button className="mt-4" disabled={created} onClick={()=>{setCreated(true);log('Vault chain modeled locally from identity root')}}><Vault/>{created?'Vault chain modeled':'Model vault chain'}</Button></>}</div>{vaults.length>0&&created&&<div className="vault-chain" aria-label="Vault chain">{vaults.map(v=><div key={v.index} className={`vault ${v.state}`}><div className="micro">VAULT {String(v.index).padStart(2,'0')} · LEAF #{v.leaf} · {v.state.toUpperCase()}</div><code>pkh {v.publicKeyHash.slice(0,32)}…</code><code>{v.addressPreview}</code></div>)}</div>}</Panel>}
+{tab==='Assets'&&<Panel title="Assets" tag="SIMULATED · NO VAULT DEPLOYED"><div className="table-wrap" style={{margin:19}}><table><thead><tr><th>Asset</th><th>Program</th><th>Mint</th><th>Balance</th></tr></thead><tbody>{ASSETS.map(a=><tr key={a.mint}><td>{a.symbol}</td><td>{a.program}</td><td className="font-mono text-[10px]">{a.mint.slice(0,6)}…{a.mint.slice(-6)}</td><td>{a.amount.toFixed(2)} · no vault</td></tr>)}</tbody></table></div><div className="notice">SOL, SPL Token and Token-2022 assets are supported by the model. Token-2022 transfer hooks/fees must be evaluated per mint.</div></Panel>}
+{(tab==='Deposit'||tab==='Withdraw')&&<div className="two-col"><Panel title={tab==='Deposit'?'Deposit':'Prepare Withdrawal'} tag={canExecuteLive()?'LIVE':'READINESS ONLY'}><div className="instrument-body"><div className="form-grid">{tab==='Withdraw'&&<Field label="Recipient" hint="Solana address receiving the withdrawal."><input aria-label="Recipient" value={w.recipient} onChange={e=>setW({...w,recipient:e.target.value.trim()})}/></Field>}<Field label="Asset"><select aria-label="Asset" value={w.mint} onChange={e=>setW({...w,mint:e.target.value})}>{ASSETS.map(a=><option key={a.mint} value={a.mint}>{a.symbol} · {a.program}</option>)}</select></Field><Field label="Amount"><input type="number" min="0" step="any" aria-label="Amount" value={w.amount} onChange={e=>setW({...w,amount:e.target.value})}/></Field></div>{tab==='Withdraw'&&<div className="detail-rows mt-4"><div><span>Active vault</span><strong>{active?`#${active.index} · leaf #${active.leaf}`:'Open identity'}</strong></div><div><span>Next vault hash <InfoTip text="Remainder rolls into this vault; the commitment binds it."/></span><strong>{commitment?commitment.nextVaultHash.slice(0,24)+'…':'—'}</strong></div><div><span>Commitment digest</span><strong>{commitment?commitment.digest:'Complete the form'}</strong></div></div>}<Button className="mt-4" disabled={busy||(tab==='Withdraw'?!commitment:!(amount>0)||!active)} onClick={()=>tryLive(tab==='Deposit'?'deposit':'withdraw')}>{busy?<LoaderCircle className="animate-spin"/>:tab==='Deposit'?<ArrowDownToLine/>:<ArrowUpFromLine/>}Build {tab==='Deposit'?'deposit':'withdrawal'} transaction</Button><p className="micro mt-3">EXPECTED RESULT: “{QUANTUM_WALLET_STATUS}” — the adapter refuses live construction.</p></div></Panel><Panel title="Commitment fields" tag="SIGNED BY ONE WOTS LEAF"><pre className="code-block" style={{margin:19}}>{commitment?JSON.stringify(commitment.fields,null,2):'recipient · mint · amount · vault index\nnext-vault hash · program · version namespace'}</pre></Panel></div>}
+{tab==='Staging'&&<Panel title="Signature staging" tag={`${PQ_PARAMETERS.signatureBytes} B · ${chunks.length} CHUNKS`}><div className="instrument-body"><p className="text-xs text-muted-foreground mb-4">A WOTS+Merkle signature does not fit beside instructions in one 1,232-byte Solana packet, so it is written to a staging account in chunks, then verified in a final spend instruction.</p>{chunks.map(ch=><div key={ch.chunk} className="module-row"><span>Chunk {ch.chunk} · bytes {ch.from}–{ch.to}</span><span className="status-tag">{staged>=ch.chunk?'STAGED · SIMULATED':'PENDING'}</span></div>)}<div className="progress-track"><progress max={chunks.length} value={staged} aria-label="Chunks staged"/></div><div className="flex gap-3 mt-4"><Button variant="outline" disabled={staged>=chunks.length} onClick={()=>{setStaged(s=>s+1);log(`Chunk ${staged+1} staged (simulation)`)}}><Layers/>Simulate next chunk</Button><Button variant="ghost" onClick={()=>setStaged(0)}>Reset</Button></div></div></Panel>}
+{tab==='Rollover'&&<Panel title="Rollover" tag="ONE-TIME SPEND"><div className="instrument-body"><p className="text-xs text-muted-foreground mb-4">After a spend, the vault is a tombstone. Its remainder must already be committed to the next vault; it can never sign again.</p><div className="detail-rows"><div><span>Current</span><strong>{active?`Vault #${active.index}`:'—'}</strong></div><div><span>Next</span><strong>{vaults[(active?.index??0)+1]?.publicKeyHash.slice(0,24)??'—'}…</strong></div></div><Button className="mt-4" variant="outline" disabled={!created||!active} onClick={()=>{setConsumed(n=>n+1);log(`Vault #${active?.index} tombstoned · remainder rolled forward (model)`)}}><RotateCw/>Simulate rollover</Button></div>{created&&<div className="vault-chain">{vaults.map(v=><div key={v.index} className={`vault ${v.state}`}><div className="micro">#{v.index} · {v.state==='consumed'?'TOMBSTONE':v.state.toUpperCase()}</div><code>{v.publicKeyHash.slice(0,20)}…</code></div>)}</div>}</Panel>}
+{tab==='History'&&<Panel title="History / Proof Trace" tag="LOCAL MODEL">{history.length?<div className="detail-rows" style={{padding:19}}>{history.map((h,i)=><div key={i}><span>{h.t}</span><strong>{h.e}</strong></div>)}</div>:<div className="empty-state" style={{margin:19}}><History size={24}/>No modeled events yet.</div>}</Panel>}
+</>}
