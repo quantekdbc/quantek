@@ -38,8 +38,6 @@ npm install
 npm run dev
 ```
 
-The local development server starts on port 3000.
-
 ## Quality checks
 
 ```bash
