@@ -38,6 +38,6 @@ export async function signDerivationMessage(wallet:Wallet,account:WalletAccount,
  const bytes=new TextEncoder().encode(message);
  const [out]=await feature.signMessage({account,message:bytes});
  if(!out||!equal(out.signedMessage,bytes))throw new Error('Wallet signed a different message. Derivation rejected.');
- if(!ed25519.verify(out.signature,bytes,account.publicKey))throw new Error('Wallet returned an invalid signature.');
+ if(!ed25519.verify(new Uint8Array(out.signature),bytes,new Uint8Array(account.publicKey)))throw new Error('Wallet returned an invalid signature.');
  return new Uint8Array(out.signature);
 }
