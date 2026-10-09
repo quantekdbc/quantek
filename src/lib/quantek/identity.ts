@@ -88,6 +88,26 @@ export async function signLeaf(source: SecretKeys | IdentityTree, leaf: number, 
   return {kind: 'quantek-wots16-merkle-v1', domain, label, message, leaf, publicSeed: hex(tree.keys.publicSeed), root: hex(tree.root), signature, authPath: authPath(tree, leaf)};
 }
 
+export type WalletSpendWotsProof = {
+  leaf:number;
+  digest:string;
+  publicSeed:string;
+  root:string;
+  signature:string[];
+  authPath:string[];
+};
+
+/** Signs an already domain-separated 32-byte Quantum Wallet spend digest.
+ * Caller MUST reserve the leaf first and MUST use the exact digest reconstructed by the on-chain verifier.
+ */
+export async function signLeafDigest(source: SecretKeys | IdentityTree, leaf:number, digestBytes:Uint8Array):Promise<WalletSpendWotsProof>{
+  if(digestBytes.length!==32)throw new Error('Quantum Wallet spend digest must be exactly 32 bytes.');
+  const tree='root' in source?source:await buildTree(source);
+  const d=digits(digestBytes);
+  const signature=d.map((digit,i)=>hex(chain(chainSecret(tree.keys,leaf,i),tree.keys.publicSeed,leaf,i,0,digit)));
+  return {leaf,digest:hex(digestBytes),publicSeed:hex(tree.keys.publicSeed),root:hex(tree.root),signature,authPath:authPath(tree,leaf)};
+}
+
 /** Append-only one-time leaf ledger. Persists ONLY used indexes + public identity metadata. */
 export type LeafLedger = {root: string; used: number[]; purposes: Record<number, string>};
 const STORE = 'quantek.ledger.v1:';
