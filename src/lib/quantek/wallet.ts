@@ -29,3 +29,15 @@ export async function signReviewedTransaction({wallet,account,connection,transac
  if(!signature||!signed.verifySignatures(false))throw new Error('Wallet returned an invalid or missing signature.');
  return new Uint8Array(output.signedTransaction);
 }
+import {SolanaSignMessage,type SolanaSignMessageFeature} from '@solana/wallet-standard-features';
+import {ed25519} from '@noble/curves/ed25519';
+/** Signs the deterministic QUANTEK derivation message locally. No transaction. Returned signature stays in memory. */
+export async function signDerivationMessage(wallet:Wallet,account:WalletAccount,message:string){
+ const feature=wallet.features[SolanaSignMessage] as SolanaSignMessageFeature[typeof SolanaSignMessage]|undefined;
+ if(!feature)throw new Error('Wallet does not support message signing.');
+ const bytes=new TextEncoder().encode(message);
+ const [out]=await feature.signMessage({account,message:bytes});
+ if(!out||!equal(out.signedMessage,bytes))throw new Error('Wallet signed a different message. Derivation rejected.');
+ if(!ed25519.verify(out.signature,bytes,account.publicKey))throw new Error('Wallet returned an invalid signature.');
+ return new Uint8Array(out.signature);
+}
