@@ -267,12 +267,12 @@ export function stagingPlan(bytes:number=PQ_PARAMETERS.signatureBytes){
 }
 export class ProtocolNotDeployedError extends Error{
   constructor(){
-    super('Quantum Wallet verifier setup required. Deploy/configure the QUANTEK verifier before live custody.');
+    super('Quantum Wallet verifier is not deployed or configured. Complete QUANTEK verifier setup before live custody.');
     this.name='ProtocolNotDeployedError';
   }
 }
 export function createQuantumWalletAdapter(){
-  const refuse=async():Promise<never>=>{throw new ProtocolNotDeployedError()};
+  const refuse=async(..._args:unknown[]):Promise<never>=>{throw new ProtocolNotDeployedError()};
   return {
     programId:QUANTEK_QUANTUM_WALLET_PROGRAM_ID,
     deployed:canExecuteLive(),
