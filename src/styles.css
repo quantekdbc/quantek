@@ -59,3 +59,34 @@
 @media(max-width:600px){
   .top-product-menu{display:inline-flex!important;width:30px!important;height:30px!important}
 }
+
+
+/* Launch and tokenized quote-market surfaces */
+.launch-mode-switch{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.launch-mode-switch .segmented{min-width:300px}
+.launch-steps{grid-template-columns:repeat(7,1fr)}
+.launch-image-preview{width:88px;height:88px;border:1px solid var(--border);border-radius:3px;overflow:hidden;background:var(--secondary)}
+.launch-image-preview img{width:100%;height:100%;object-fit:cover}
+.rwa-picker{max-height:340px;overflow:auto;border:1px solid var(--border);border-radius:3px;background:var(--background)}
+.rwa-row{width:100%;display:flex;align-items:center;justify-content:space-between;gap:15px;padding:13px 14px;border:0;border-bottom:1px solid var(--border);background:transparent;color:var(--foreground);text-align:left}
+.rwa-row:last-child{border-bottom:0}
+.rwa-row:hover,.rwa-row.selected{background:var(--secondary)}
+.rwa-row strong{display:block;font-size:11px;font-weight:500}
+.rwa-row small{display:block;margin-top:4px;font:8px var(--font-mono);color:var(--muted-foreground)}
+.quote-inspection{border-top:1px solid var(--border);padding-top:18px}
+.review-grid{min-width:0}
+.review-grid .detail-rows strong{max-width:58%;overflow-wrap:anywhere}
+.wizard-form .strategy-layout{grid-template-columns:minmax(0,1.2fr) minmax(260px,.8fr)}
+.wizard-form .sparkline{width:100%;height:150px}
+@media(max-width:980px){
+  .launch-steps{grid-template-columns:repeat(4,1fr)}
+  .launch-steps button:nth-child(n+5){border-top:1px solid var(--border)}
+}
+@media(max-width:600px){
+  .launch-mode-switch{align-items:stretch;flex-direction:column}
+  .launch-mode-switch .segmented{min-width:0;width:100%}
+  .launch-steps{grid-template-columns:repeat(2,1fr)}
+  .launch-steps button{border-top:1px solid var(--border)}
+  .rwa-row{align-items:flex-start;flex-direction:column}
+  .wizard-form .strategy-layout{grid-template-columns:1fr}
+}
