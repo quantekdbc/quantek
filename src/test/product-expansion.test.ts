@@ -1,40 +1,73 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { PublicKey } from "@solana/web3.js";
-import { TOKENIZED_QUOTE_ASSETS, validateTokenizedQuoteRegistry } from "@/lib/quantek/rwa";
+import { RWA_PRESETS, isValidMint } from "@/lib/quantek/rwa";
 import {
-  QUANTEK_QUANTUM_WALLET_DOMAIN,
   QUANTEK_QUANTUM_WALLET_PROGRAM_ID,
-  isQuantumWalletProtocolDeployed,
-  prepareQuantumWalletSpend,
+  canExecuteLive,
+  createQuantumWalletAdapter,
+  ProtocolNotDeployedError,
+  stagingPlan,
 } from "@/lib/quantek/quantum-wallet";
-import {
-  LAUNCH_MODES,
-  QUANTUM_SCHEMES,
-  selectPoolCreationMethod,
-  validateQuoteMintSelection,
-} from "@/lib/quantek/launch-model";
+import { DOMAINS, PQ_PARAMETERS } from "@/lib/quantek/pq";
+import { launchSchema, SIGNATURE_SCHEMES } from "@/lib/quantek/validation";
 import { productNavigation } from "@/lib/quantek/data";
 
+const baseLaunch = {
+  mode: "standard" as const,
+  scheme: "wots" as const,
+  image: "",
+  name: "Quantek Test",
+  symbol: "QTEST",
+  description: "",
+  twitter: "",
+  website: "",
+  metadata: "",
+  decimals: 9,
+  supply: 1_000_000,
+  tokenType: "SPL" as const,
+  builder: "Market Cap" as const,
+  initialCap: 10_000,
+  migrationCap: 100_000,
+  quoteThreshold: 800,
+  supplyMigration: 80,
+  startingBps: 200,
+  endingBps: 50,
+  scheduler: "Linear" as const,
+  dynamic: true,
+  collectMode: "Quote only" as const,
+  creatorFee: 20,
+  creationFee: 0,
+  dammFee: 25,
+  partnerLiquidity: 20,
+  creatorLiquidity: 80,
+  partnerLocked: 0,
+  creatorLocked: 40,
+  vesting: 90,
+  leftoverReceiver: "",
+  quoteKind: "crypto" as const,
+  quote: "SOL" as const,
+  customMint: "",
+  tokenizedMint: "",
+  firstBuy: "none" as const,
+  firstBuyAmount: 0,
+};
+
 describe("QUANTEK product expansion invariants", () => {
-  it("ships all 61 Solana tokenized-market quote presets with valid unique public keys", () => {
-    expect(TOKENIZED_QUOTE_ASSETS).toHaveLength(61);
-    expect(validateTokenizedQuoteRegistry()).toBe(true);
-    expect(new Set(TOKENIZED_QUOTE_ASSETS.map((asset) => asset.mint)).size).toBe(61);
-    for (const asset of TOKENIZED_QUOTE_ASSETS) {
+  it("ships 61 unique tokenized-market presets with valid Solana public keys", () => {
+    expect(RWA_PRESETS).toHaveLength(61);
+    expect(new Set(RWA_PRESETS.map((asset) => asset.mint)).size).toBe(61);
+    for (const asset of RWA_PRESETS) {
       expect(new PublicKey(asset.mint).toBase58()).toBe(asset.mint);
-      expect(validateQuoteMintSelection(asset.mint)).toBe(true);
+      expect(isValidMint(asset.mint)).toBe(true);
     }
   });
 
-  it("models both Standard and Quantum DBC launch paths", () => {
-    expect(LAUNCH_MODES).toEqual(["Standard", "Quantum"]);
-    expect(QUANTUM_SCHEMES).toContain("QUANTEK Root");
-    expect(QUANTUM_SCHEMES).toContain("ML-DSA-65");
-    expect(selectPoolCreationMethod("None")).toBe("creator.createPool");
-    expect(selectPoolCreationMethod("Creator")).toBe("creator.createPoolWithFirstBuy");
-    expect(selectPoolCreationMethod("Partner + Creator")).toBe(
-      "creator.createPoolWithPartnerAndCreatorFirstBuy",
+  it("validates both Standard and Quantum launch modes", () => {
+    expect(launchSchema.safeParse(baseLaunch).success).toBe(true);
+    expect(launchSchema.safeParse({ ...baseLaunch, mode: "quantum" }).success).toBe(true);
+    expect(SIGNATURE_SCHEMES.map((scheme) => scheme.id)).toEqual(
+      expect.arrayContaining(["wots", "ml-dsa-65", "slh-dsa", "fn-dsa", "hybrid"]),
     );
   });
 
@@ -48,28 +81,38 @@ describe("QUANTEK product expansion invariants", () => {
     ]);
   });
 
-  it("keeps the Quantum Wallet adapter fail-closed until QUANTEK deploys its own program", () => {
+  it("keeps Quantum Wallet live execution fail-closed until a QUANTEK program is deployed", async () => {
     expect(QUANTEK_QUANTUM_WALLET_PROGRAM_ID).toBeNull();
-    expect(isQuantumWalletProtocolDeployed()).toBe(false);
-    const plan = prepareQuantumWalletSpend({
-      vaultIndex: 0,
-      recipient: "11111111111111111111111111111111",
-      asset: { kind: "sol", symbol: "SOL", mint: null, decimals: 9 },
-      amountAtomic: 1n,
-      nextPublicKeyHash: "ab".repeat(32),
-    });
-    expect(plan.liveExecutionAvailable).toBe(false);
-    expect(plan.domain).toBe("quantek.network/quantum-wallet/v1");
-    expect(plan.warning).toContain("not deployed");
+    expect(canExecuteLive()).toBe(false);
+    expect(stagingPlan(PQ_PARAMETERS.signatureBytes)).toHaveLength(3);
+    const adapter = createQuantumWalletAdapter();
+    expect(adapter.deployed).toBe(false);
+    await expect(
+      adapter.buildWithdraw({
+        recipient: "11111111111111111111111111111111",
+        mint: "SOL",
+        amount: 1,
+        vaultIndex: 0,
+      }),
+    ).rejects.toBeInstanceOf(ProtocolNotDeployedError);
   });
 
-  it("uses QUANTEK-owned product domains rather than external protocol domains", () => {
-    expect(QUANTEK_QUANTUM_WALLET_DOMAIN.startsWith("quantek.network/")).toBe(true);
-    expect(QUANTEK_QUANTUM_WALLET_DOMAIN.toLowerCase()).not.toContain("pqc.market");
+  it("uses only QUANTEK-owned cryptographic product domains", () => {
+    for (const domain of Object.values(DOMAINS)) {
+      expect(domain.startsWith("quantek.network/")).toBe(true);
+      expect(domain.toLowerCase()).not.toContain("pqc.market");
+    }
   });
 
-  it("rejects malformed tokenized quote selections", () => {
-    expect(validateQuoteMintSelection("not-a-solana-mint")).toBe(false);
-    expect(validateQuoteMintSelection("")).toBe(false);
+  it("rejects malformed tokenized quote selections and invalid base decimals", () => {
+    expect(isValidMint("not-a-solana-mint")).toBe(false);
+    expect(launchSchema.safeParse({ ...baseLaunch, decimals: 5 }).success).toBe(false);
+    expect(
+      launchSchema.safeParse({
+        ...baseLaunch,
+        quoteKind: "tokenized",
+        tokenizedMint: "not-a-solana-mint",
+      }).success,
+    ).toBe(false);
   });
 });
